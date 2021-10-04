@@ -104,11 +104,11 @@ class xml_parser:
 if __name__ == '__main__':
     x = xml_parser()
     damp_names = ["one","two","three","four","five"]
-    damp_enable = [0,0,0,0,0]
-    flow_meter_names = ["one1","two1","three1","four1","five1"]
+    damp_enable = [1,1,1,0,0]
+    flow_meter_names = ["воздух(осн)","воздух(обд1)","воздух(обд2)","топливо1","five1"]
     flow_meter_enable = [1,1,1,0,0]
-    mb1_names = ["one","two","three","four","five","6","7","8"]
-    mb1_enable = [1,1,1,1,0,0,0,0]
+    mb1_names = ["давление1","two","three","давление2","five","6","7","8"]
+    mb1_enable = [1,0,0,1,0,0,0,0]
     mb2_names = ["one","two","three","four","five","6","7","8"]
     mb2_enable = [0,0,0,0,0,0,0,0]
     flow_meter_id = [2,3,4,5,0]

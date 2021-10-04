@@ -134,14 +134,19 @@ class main_loop_class:
         self.obj_owen ={}
         self.message_error = 0
         self.list_state = {"work": 0,
-                           "period": 0}
+                           "period": 0,
+                           "save": 0,
+                           "start_save": 1}
 
 
         for i in range(0,5):
             self.dampers[init_param["damp_ch"][i]] = {"enable": init_param["damp_enable"][i],
                                                     "error":init_param["error"][i],
                                                     "name":init_param["damp_names"][i],
-                                                    "id":init_param["damp_id"][i]}
+                                                    "id":init_param["damp_id"][i],
+                                                      "is_new_task":0,
+                                                      "ready_move":0,
+                                                      "mode": "time"}
         for i in range(0,5):
             self.flow_meter[init_param["flow_meter_ch"][i]] = {"valume": [0,0,0],
                                                                 "enable": init_param["flow_meter_enable"][i],
@@ -163,19 +168,19 @@ class main_loop_class:
         print(self.dampers)
         for key in self.flow_meter:
             if self.flow_meter[key]["enable"] == str(1):
-                self.flow_meter[key]["obj"] = flow_meter_class(self.comport,int(self.flow_meter[key]["id"]),register_flow=167,register_temp=171,debug=True)
+                self.flow_meter[key]["obj"] = flow_meter_class(self.comport,int(self.flow_meter[key]["id"]),register_flow=167,register_temp=171)
 
         print(self.flow_meter)
         for key in self.mb1_device:
             if self.mb1_device[key]["enable"] == str(1):
-                self.mb1_device[key]["obj"] = mx110_read_data(self.comport,int(self.mb1_device[key]["id"]),debug=True)
+                self.mb1_device[key]["obj"] = mx110_read_data(self.comport,int(self.mb1_device[key]["id"]))
         for key in self.mb2_device:
             if self.mb2_device[key]["enable"] == str(1):
-                self.mb2_device[key]["obj"] = mx110_read_data(self.comport, int(self.mb2_device[key]["id"]),debug=True)
+                self.mb2_device[key]["obj"] = mx110_read_data(self.comport, int(self.mb2_device[key]["id"]))
         print(self.mb1_device)
         for key in self.dampers:
             if self.dampers[key]["enable"] == str(1):
-                self.obj_owen = owen(self.comport,int(self.dampers[key]["id"]),debug=True)
+                self.obj_owen = owen(self.comport,int(self.dampers[key]["id"]))
                 break
 
     def _read_all_data(self):
@@ -192,7 +197,8 @@ class main_loop_class:
             ready_or  = self.obj_owen.read_ready()
             for key in self.dampers:
                 self.dampers[key]["ready_move"] = ready_or[int(key)]
-        except:
+        except Exception as e:
+            print(e)
             self.message_error = "что-то не так с опросом"
 
     def set_new_task(self, mode='none', time=500, q=0, dir=0, key = 0):
@@ -257,8 +263,64 @@ class main_loop_class:
             self._is_ready_task()
             self._read_all_data()
             self._rule_device()
+            self.save_data()
 
             self.list_state["period"] = time.time() - start_time
+
+    def save_data(self):
+        if self.list_state["save"] == 0:
+            try:
+                self.file.close()
+            except:
+                print("файл закрыт")
+            return
+        if self.list_state["start_save"] == 1:
+            timestr = time.strftime("%Y_%m_%d-%H_%M")
+            self.file = open("data_" + timestr, "w")
+            str_head = ""
+            for key in self.flow_meter:
+                if self.flow_meter[key]["enable"] == str(1):
+                    str_head += str(self.flow_meter[key]["name"])
+                    str_head += "flow,"
+                    str_head += str(self.flow_meter[key]["name"])
+                    str_head += "temp,"
+            for key in self.mb1_device:
+                if self.mb1_device[key]["enable"] == str(1):
+                    str_head += str(self.mb1_device[key]["name"])
+                    str_head += ","
+            for key in self.mb2_device:
+                if self.mb2_device[key]["enable"] == str(1):
+                    str_head += str(self.mb2_device[key]["name"])
+                    str_head += ","
+            for key in self.dampers:
+                if self.dampers[key]["enable"] == str(1):
+                    str_head += "заслонка_"
+                    str_head += str(key)
+                    str_head += "_задача,"
+            str_head +="\n"
+            self.file.write(str_head)
+            self.list_state["start_save"] = 0
+        str_data = ""
+        for key in self.flow_meter:
+            if self.flow_meter[key]["enable"] == str(1):
+                str_data += str(self.flow_meter[key]["valume"][0])
+                str_data += ","
+                str_data += str(self.flow_meter[key]["valume"][1])
+                str_data += ","
+        for key in self.mb1_device:
+            if self.mb1_device[key]["enable"] == str(1):
+                str_data += str(self.mb1_device[key]["valume"])
+                str_data += ","
+        for key in self.mb2_device:
+            if self.mb2_device[key]["enable"] == str(1):
+                str_data += str(self.mb2_device[key]["valume"])
+                str_data += ","
+        str_data += time.strftime("%Y,%m,%d,%H,%M")
+        str_data += "\n"
+        self.file.write(str_data)
+
+
+
 
 
 
@@ -271,7 +333,8 @@ if __name__ == '__main__':
     '''
     y  = xml_parser.xml_parser()
     x = main_loop_class(y.read_all_xml_data())
+    x.list_state["work"] = 1
     while 1 ==1:
         time.sleep(0.5)
-        xx = x.read_test_data()
-        print(xx)
+        x.main_loop()
+        print(x.get_all_data_to_ui())

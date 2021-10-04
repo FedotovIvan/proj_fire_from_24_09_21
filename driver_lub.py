@@ -188,18 +188,18 @@ class owen:
 
     def open_q(self, num_q, time):
         if self.debug == False:
-            self.write_register(self.register_time[num_q - 1], time)
-            self.write_register(self.register_dir_q[num_q - 1], 1)
-            self.write_register(self.register_start_q[num_q - 1], 1)
+            self.write_register(self.register_time[num_q ], time)
+            self.write_register(self.register_dir_q[num_q ], 1)
+            self.write_register(self.register_start_q[num_q ], 1)
             self.ready_q[num_q - 1] = 0
         else:
             self.ready_q[num_q - 1] = 0
 
     def close_q(self, num_q, time):
         if self.debug == False:
-            self.write_register(self.register_time[num_q - 1], time)
-            self.write_register(self.register_dir_q[num_q - 1], 3)
-            self.write_register(self.register_start_q[num_q - 1], 1)
+            self.write_register(self.register_time[num_q ], time)
+            self.write_register(self.register_dir_q[num_q ], 3)
+            self.write_register(self.register_start_q[num_q ], 1)
             self.ready_q[num_q - 1] = 0
         else:
             self.ready_q[num_q - 1] = 0

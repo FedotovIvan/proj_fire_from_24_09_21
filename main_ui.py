@@ -4,7 +4,7 @@ import PyQt5
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import *
 import pyqtgraph as pg
-
+from threading import Thread
 from ui_py import Ui_MainWindow as MainForm
 from main_lopp import main_loop_class
 from xml_parser import xml_parser
@@ -17,7 +17,10 @@ class my_ui_class(QtWidgets.QMainWindow,):
 
         self.ui.setupUi(self)
         self.ui.connect_bt.clicked.connect(self.xss)
-
+        self.ui.p2_bt_save.clicked.connect(self.save_init_setting)
+        self.ui.unconnect.clicked.connect(self.func_unconnect)
+        self.ui.save_from_now.clicked.connect(self.func_save_from_now)
+        self.ui.save.clicked.connect(self.stop_save)
         self.timer = QTimer()
         self.timer.timeout.connect(self.timer_func)
 
@@ -26,12 +29,18 @@ class my_ui_class(QtWidgets.QMainWindow,):
         #test
         self.xml = xml_parser()
         self.mainloop = main_loop_class(self.xml.read_all_xml_data())
-        self.mainloop.list_state["work"] = 1
         self.my_data = self.mainloop.get_all_data_to_ui()
         self.create_table_rate()
         self.create_table_data()
 
         self.timer.start(500)
+    def stop_save(self):
+        self.mainloop.list_state["save"] = 0
+    def func_save_from_now(self):
+        self.mainloop.list_state["save"] = 1
+        self.mainloop.list_state["start_save"] = 1
+    def func_unconnect(self):
+        self.mainloop.list_state["work"] = 0
 
     def xss(self):
         self.xml = xml_parser()
@@ -40,6 +49,8 @@ class my_ui_class(QtWidgets.QMainWindow,):
         self.my_data = self.mainloop.get_all_data_to_ui()
         self.create_table_rate()
         self.create_table_data()
+        self.tr = Thread(target=self.mainloop.main_loop)
+        self.tr.start()
 
     def create_table_rate(self):
         num_flow_meters = 0
@@ -54,7 +65,7 @@ class my_ui_class(QtWidgets.QMainWindow,):
 
         item = self.ui.table_rate.horizontalHeaderItem(0)
         item.setText(self._translate("MainWindow", "окно ввода"))
-        self.ui.table_rate.horizontalHeader().resizeSection(0, 100)
+        self.ui.table_rate.horizontalHeader().resizeSection(0, 70)
         #item.setSizeHint(QtCore.QSize(20, 10))
 
         item = self.ui.table_rate.horizontalHeaderItem(1)
@@ -91,7 +102,7 @@ class my_ui_class(QtWidgets.QMainWindow,):
                     self.ui.table_rate.setItem(x, 1, QtWidgets.QTableWidgetItem(str("%.04f (%.03f)"%(rate[0],rate[2]))))
                     self.ui.table_rate.setItem(x, 3, QtWidgets.QTableWidgetItem(str("%.03f"%temp[1])))
                     self.ui.table_rate.setItem(x, 4, QtWidgets.QTableWidgetItem("?"))
-                    if self.my_data["dampers"][key]["ready_task"] == str(1):
+                    if self.my_data["dampers"][key]["ready_task"] == 1:
 
                         self.ui.table_rate.item(x, 4).setBackground(QtGui.QColor(0, 255, 0))
                     else:
@@ -103,6 +114,8 @@ class my_ui_class(QtWidgets.QMainWindow,):
                             self.ui.table_rate.setItem(x, 2, QtWidgets.QTableWidgetItem( "(+)"+str(self.my_data["dampers"][key]["time"]) ))
                         if self.my_data["dampers"][key]["dir"] == 3:
                             self.ui.table_rate.setItem(x, 2, QtWidgets.QTableWidgetItem( "(-)"+str(self.my_data["dampers"][key]["time"]) ))
+
+                    print(self.my_data["dampers"][key]["ready_task"])
 
                 except Exception as e:
                     print(e)
@@ -144,11 +157,25 @@ class my_ui_class(QtWidgets.QMainWindow,):
             i += 1
     def timer_func(self):
 
-        self.mainloop._read_all_data()
         self.my_data = self.mainloop.get_all_data_to_ui()
         self.refresh_table_data()
         self.refresh_table_rate()
-        print(self.my_data["flow_meter"])
+        self.ui.label_20.setText("work = %d\nperiod = %.01f\nсохраняет = %.01f"%(self.mainloop.list_state["work"],self.mainloop.list_state["period"],
+                                                                                  self.mainloop.list_state["save"]))
+
+        if self.mainloop.list_state["work"] == 1:
+            self.ui.connect_bt.setEnabled(False)
+            self.ui.unconnect.setEnabled(True)
+        else:
+            self.ui.connect_bt.setEnabled(True)
+            self.ui.unconnect.setEnabled(False)
+        if self.mainloop.list_state["save"] == 0:
+            self.ui.save_from_now.setEnabled(True)
+            self.ui.save.setEnabled(False)
+        else:
+            self.ui.save_from_now.setEnabled(False)
+            self.ui.save.setEnabled(True)
+        #print(self.my_data["flow_meter"])
 
     def press_enter(self):
         '''print(self.ui.table_rate.item(0,0).text())
@@ -173,6 +200,8 @@ class my_ui_class(QtWidgets.QMainWindow,):
                             elif str_in[0] == "-":
                                 self.mainloop.set_new_task("time", str_in[1:], 0, 3, key)
                             else: self.mainloop.set_new_task("q", 0, str_in, 3, key)
+                self.ui.table_rate.item(self.list_table.index(i), 0).setText("")
+
 
 
 
@@ -182,6 +211,77 @@ class my_ui_class(QtWidgets.QMainWindow,):
         if not string_in:
             return -1
 
+    def save_init_setting(self):
+        damp_en = [0,0,0,0,0]
+        if self.ui.p2_damp0.isChecked():
+            damp_en[0] = 1
+        if self.ui.p2_damp1.isChecked():
+            damp_en[1] = 1
+        if self.ui.p2_damp2.isChecked():
+            damp_en[2] = 1
+        if self.ui.p2_damp3.isChecked():
+            damp_en[3] = 1
+        if self.ui.p2_damp4.isChecked():
+            damp_en[4] = 1
+        flow_enable = [0,0,0,0,0]
+        if self.ui.p2_flow0.isChecked():
+            flow_enable[0]=1
+        if self.ui.p2_flow1.isChecked():
+            flow_enable[1]=1
+        if self.ui.p2_flow2.isChecked():
+            flow_enable[2]=1
+        if self.ui.p2_flow3.isChecked():
+            flow_enable[3]=1
+        if self.ui.p2_flow4.isChecked():
+            flow_enable[4]=1
+        mb1_en = [0,0,0,0,0,0,0,0]
+        if self.ui.p2_en_mb1_ch0.isChecked():
+            mb1_en[0]=1
+        if self.ui.p2_en_mb1_ch1.isChecked():
+            mb1_en[1]=1
+        if self.ui.p2_en_mb1_ch2.isChecked():
+            mb1_en[2]=1
+        if self.ui.p2_en_mb1_ch3.isChecked():
+            mb1_en[3]=1
+        if self.ui.p2_en_mb1_ch4.isChecked():
+            mb1_en[4]=1
+        if self.ui.p2_en_mb1_ch5.isChecked():
+            mb1_en[5]=1
+        if self.ui.p2_en_mb1_ch6.isChecked():
+            mb1_en[6]=1
+        if self.ui.p2_en_mb1_ch7.isChecked():
+            mb1_en[7]=1
+        mb2_en = [0, 0, 0, 0, 0, 0, 0, 0]
+        mb1_name =["0", '1', '2', '3', "4", "5", "6", "7"]
+        mb1_name[0] = self.ui.p2_en_mb1_name0.text()
+        mb1_name[1] = self.ui.p2_en_mb1_name1.text()
+        mb1_name[2] = self.ui.p2_en_mb1_name2.text()
+        mb1_name[3] = self.ui.p2_en_mb1_name3.text()
+        mb1_name[4] = self.ui.p2_en_mb1_name4.text()
+        mb1_name[5] = self.ui.p2_en_mb1_name5.text()
+        mb1_name[6] = self.ui.p2_en_mb1_name6.text()
+        mb1_name[7] = self.ui.p2_en_mb1_name7.text()
+        mb2_name = ["0", '1', '2', '3', "4", "5", "6", "7"]
+        damp_names = ["one", "two", "three", "four", "five"]
+        flow_meter_names = ["one1", "two1", "three1", "four1", "five1"]
+        flow_meter_id = [2, 3, 4, 5, 0]
+        flow_meter_ch = [0, 1, 2, 3, 4]
+        damp_id = [1, 1, 1, 1, 1]
+        err = [1, 1, 0, 1, 0]
+        damp_ch = [0, 1, 2, 3, 4]
+        mb1_ch = [0, 1, 2, 3, 4, 5, 6, 7]
+        mb1_id = [16, 16, 16, 16, 16, 16, 16, 16]
+        mb2_ch = [0, 1, 2, 3, 4, 5, 6, 7]
+        mb2_id = [1, 1, 1, 1, 1, 1, 1, 1]
+        self.xml.set_new_parametr(damp_names,damp_en,flow_meter_names,flow_enable,mb1_name,mb1_en,mb2_name,mb2_en,flow_meter_id,flow_meter_ch,damp_id,damp_ch,
+                                  mb1_ch,mb1_id,mb2_ch,mb2_id,err)
+
+    def load_init_p2_setting(self):
+        dat = self.xml.read_all_xml_data()
+        if dat["damp_enable"][0] == str(1):
+            self.ui.p2_damp0.setChecked(True)
+        else:
+            pass
 
 
 
