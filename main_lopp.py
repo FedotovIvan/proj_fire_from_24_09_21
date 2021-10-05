@@ -124,7 +124,7 @@ class driver_hard:
 
 class main_loop_class:
     def __init__(self, init_param):
-        self.comport = "COM10"
+        self.comport = "COM7"
         self.init_debag = False
 
         self.mb1_device ={}
@@ -134,7 +134,8 @@ class main_loop_class:
         self.obj_owen ={}
         self.message_error = 0
         self.list_state = {"work": 0,
-                           "period": 0,
+                           "period1": 0,
+                           "period2": 0,
                            "save": 0,
                            "start_save": 1}
         self.err_PID_D = {"0": 0, "1": 0, "2": 0, "3": 0, "4": 0}
@@ -148,7 +149,10 @@ class main_loop_class:
                                                     "id":init_param["damp_id"][i],
                                                       "is_new_task":0,
                                                       "ready_move":0,
-                                                      "mode": "time"}
+                                                      "mode": "time",
+                                                      "time": 0,
+                                                      "q":0,
+                                                      "dir":0}
         for i in range(0,5):
             self.flow_meter[init_param["flow_meter_ch"][i]] = {"valume": [0,0,0],
                                                                 "enable": init_param["flow_meter_enable"][i],
@@ -189,7 +193,7 @@ class main_loop_class:
         print(self.mb1_device)
         for key in self.dampers:
             if self.dampers[key]["enable"] == str(1):
-                self.obj_owen = owen(self.comport,int(self.dampers[key]["id"]),debug=self.init_debag)
+                self.obj_owen = owen("COM10",int(self.dampers[key]["id"]),debug=self.init_debag)
                 break
 
     def _read_all_data(self):
@@ -203,9 +207,9 @@ class main_loop_class:
             for key in self.mb2_device:
                 if self.mb2_device[key]["enable"] == str(1):
                     self.mb2_device[key]["valume"] = self.mb2_device[key]["obj"].read_one_channel(int(key))
-            ready_or  = self.obj_owen.read_ready()
+            '''ready_or  = self.obj_owen.read_ready()
             for key in self.dampers:
-                self.dampers[key]["ready_move"] = ready_or[int(key)]
+                self.dampers[key]["ready_move"] = ready_or[int(key)]'''
         except Exception as e:
             print(e)
             self.message_error = "что-то не так с опросом"
@@ -244,19 +248,19 @@ class main_loop_class:
                 if float(self.dampers[key]["q"]) < float(q) + float(self.dampers[key]["error"]):
                     if out > 5000:
                         print("close",key,"=", 5000)
-                        self.obj_owen.close_q(int(key), 5000)
+                        self.obj_owen.open_q(int(key), 5000)
                     if out >50 and out<5000:
                         print("close", key, "=", out)
-                        self.obj_owen.close_q(int(key), int(out))
+                        self.obj_owen.open_q(int(key), int(out))
                     self.dampers[key]["ready_move"] = 0
 
                 elif float(self.dampers[key]["q"]) > float(q) - float(self.dampers[key]["error"]):
                     if out < -5000:
                         print("open", key, "=", 5000)
-                        self.obj_owen.open_q(int(key), 5000)
+                        self.obj_owen.close_q(int(key), 5000)
                     if out < -50 and out > -5000:
                         print("open", key, "=", out)
-                        self.obj_owen.open_q(int(key), int((-1)*out))
+                        self.obj_owen.close_q(int(key), int((-1)*out))
                     self.dampers[key]["ready_move"] = 0
                 else:
                     self.dampers[key]["ready_task"] = 1
@@ -295,12 +299,20 @@ class main_loop_class:
     def main_loop(self):
         while self.list_state["work"] == 1:
             start_time = time.time()
-            self._is_ready_task()
             self._read_all_data()
-            self._rule_device()
             self.save_data()
+            self.list_state["period1"] = time.time() - start_time
+    def main_loop_owen(self):
+        while self.list_state["work"] == 1:
+            start_time = time.time()
 
-            self.list_state["period"] = time.time() - start_time
+            ready_or = self.obj_owen.read_ready()
+            self._is_ready_task()
+            for key in self.dampers:
+                self.dampers[key]["ready_move"] = ready_or[int(key)]
+            self._rule_device()
+            self.list_state["period2"] = time.time() - start_time
+
 
     def save_data(self):
         if self.list_state["save"] == 0:

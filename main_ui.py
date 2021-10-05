@@ -21,6 +21,8 @@ class my_ui_class(QtWidgets.QMainWindow,):
         self.ui.unconnect.clicked.connect(self.func_unconnect)
         self.ui.save_from_now.clicked.connect(self.func_save_from_now)
         self.ui.save.clicked.connect(self.stop_save)
+        self.ui.stop_bt.clicked.connect(self.func_stop_bt)
+
         self.timer = QTimer()
         self.timer.timeout.connect(self.timer_func)
 
@@ -34,6 +36,11 @@ class my_ui_class(QtWidgets.QMainWindow,):
         self.create_table_data()
 
         self.timer.start(200)
+
+    def func_stop_bt(self):
+        self.mainloop.set_new_task("time",10,1,4,str(0))
+        self.mainloop.set_new_task("time",10,1,4,str(1))
+        self.mainloop.set_new_task("time", 10, 1, 4, str(2))
     def stop_save(self):
         self.mainloop.list_state["save"] = 0
     def func_save_from_now(self):
@@ -51,6 +58,8 @@ class my_ui_class(QtWidgets.QMainWindow,):
         self.create_table_data()
         self.tr = Thread(target=self.mainloop.main_loop)
         self.tr.start()
+        self.tr1 = Thread(target=self.mainloop.main_loop_owen)
+        self.tr1.start()
 
     def create_table_rate(self):
         num_flow_meters = 0
@@ -161,8 +170,9 @@ class my_ui_class(QtWidgets.QMainWindow,):
         self.my_data = self.mainloop.get_all_data_to_ui()
         self.refresh_table_data()
         self.refresh_table_rate()
-        self.ui.label_20.setText("work = %d\nperiod = %.01f\nсохраняет = %.01f"%(self.mainloop.list_state["work"],self.mainloop.list_state["period"],
-                                                                                  self.mainloop.list_state["save"]))
+        self.ui.label_20.setText("подключен ли = %d\nпериод датч = %.01f\nпериод овен = %.02f\nсохраняет = %.01f"%(self.mainloop.list_state["work"],
+                                                                                                  self.mainloop.list_state["period1"],self.mainloop.list_state["period2"],
+                                                                                            self.mainloop.list_state["save"]))
 
         if self.mainloop.list_state["work"] == 1:
             self.ui.connect_bt.setEnabled(False)
