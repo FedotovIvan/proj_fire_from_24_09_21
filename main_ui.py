@@ -16,7 +16,7 @@ class my_ui_class(QtWidgets.QMainWindow,):
         self._translate = QtCore.QCoreApplication.translate
 
         self.ui.setupUi(self)
-        self.ui.connect_bt.clicked.connect(self.xss)
+        self.ui.connect_bt.clicked.connect(self.func_start)
         self.ui.p2_bt_save.clicked.connect(self.save_init_setting)
         self.ui.unconnect.clicked.connect(self.func_unconnect)
         self.ui.save_from_now.clicked.connect(self.func_save_from_now)
@@ -42,7 +42,7 @@ class my_ui_class(QtWidgets.QMainWindow,):
     def func_unconnect(self):
         self.mainloop.list_state["work"] = 0
 
-    def xss(self):
+    def func_start(self):
         self.xml = xml_parser()
         self.mainloop = main_loop_class(self.xml.read_all_xml_data())
         self.mainloop.list_state["work"] = 1
@@ -290,6 +290,10 @@ class my_ui_class(QtWidgets.QMainWindow,):
             self.press_enter()
         else:
             super().keyPressEvent(qKeyEvent)
+
+    def closeEvent(self, event):
+        self.func_unconnect()
+
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)

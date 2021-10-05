@@ -16,21 +16,23 @@ class MyThread(QThread):
         self.s = None
         self.phase = 0
         self.comport = "COM7"
-        self.flow_meter = flow_meter_class(self.comport,2,register_flow=167,register_temp=171)
-        self.owen = owen(self.comport,1)
-        self.MAXSIZE = 100
+
+        self.flow_meter = flow_meter_class(self.comport,2,register_flow=167,register_temp=171,debug=True)
+        self.owen = owen(self.comport,1,debug=True)
+        self.MAXSIZE = 70
         self.arr = np.empty(self.MAXSIZE, dtype=np.float32)
         for i in range(0, self.MAXSIZE):
             self.arr[i] = 0
         self.q =[0,0,0]
-        self.kp = 0
+        self.kp = 10000
         self.ki = 0
-        self.kd = 0
+        self.kd = 50
         self.dt = 1
         self.set_point = 0
         self.integral = 0
         self.prev_err =0
         self.out = 0
+
 
 
     def run(self):
@@ -46,10 +48,12 @@ class MyThread(QThread):
         if self.owen.read_ready()[0] == 1:
             self.out = self.my_pid()
             print(self.out)
-            if self.out > 0:
-                self.owen.open_q(1,self.out)
-            else:
-                self.owen.close_q(1, (-1)*self.out)
+            print(self.q)
+            if (self.out > 50 or self.out < -50) and (self.out < 5000 or self.out > -5000):
+                if self.out > 0:
+                    self.owen.open_q(0,self.out)
+                else:
+                    self.owen.close_q(0, (-1)*self.out)
 
     def my_pid(self):
         self.err = self.set_point - self.q[0]

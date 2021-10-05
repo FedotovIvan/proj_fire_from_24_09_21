@@ -125,7 +125,7 @@ class driver_hard:
 class main_loop_class:
     def __init__(self, init_param):
         self.comport = "COM7"
-
+        self.init_debag = True
 
         self.mb1_device ={}
         self.mb2_device = {}
@@ -137,6 +137,8 @@ class main_loop_class:
                            "period": 0,
                            "save": 0,
                            "start_save": 1}
+        self.err_PID_D = {"0": 0, "1": 0, "2": 0, "3": 0, "4": 0}
+        self.prev_err_PID_D = {"0": 0, "1": 0, "2": 0, "3": 0, "4": 0}
 
 
         for i in range(0,5):
@@ -168,19 +170,19 @@ class main_loop_class:
         print(self.dampers)
         for key in self.flow_meter:
             if self.flow_meter[key]["enable"] == str(1):
-                self.flow_meter[key]["obj"] = flow_meter_class(self.comport,int(self.flow_meter[key]["id"]),register_flow=167,register_temp=171)
+                self.flow_meter[key]["obj"] = flow_meter_class(self.comport,int(self.flow_meter[key]["id"]),register_flow=167,register_temp=171,debug=self.init_debag)
 
         print(self.flow_meter)
         for key in self.mb1_device:
             if self.mb1_device[key]["enable"] == str(1):
-                self.mb1_device[key]["obj"] = mx110_read_data(self.comport,int(self.mb1_device[key]["id"]))
+                self.mb1_device[key]["obj"] = mx110_read_data(self.comport,int(self.mb1_device[key]["id"]),debug=self.init_debag)
         for key in self.mb2_device:
             if self.mb2_device[key]["enable"] == str(1):
-                self.mb2_device[key]["obj"] = mx110_read_data(self.comport, int(self.mb2_device[key]["id"]))
+                self.mb2_device[key]["obj"] = mx110_read_data(self.comport, int(self.mb2_device[key]["id"]),debug=self.init_debag)
         print(self.mb1_device)
         for key in self.dampers:
             if self.dampers[key]["enable"] == str(1):
-                self.obj_owen = owen(self.comport,int(self.dampers[key]["id"]))
+                self.obj_owen = owen(self.comport,int(self.dampers[key]["id"]),debug=self.init_debag)
                 break
 
     def _read_all_data(self):
@@ -222,6 +224,7 @@ class main_loop_class:
                     if self.dampers[key]["dir"] == 4:
                         self.obj_owen.close_all_q(int(key))
                     self.dampers[key]["ready_task"] = 0
+                    self.dampers[key]["ready_move"] = 0
                     self.dampers[key]["is_new_task"] = 0
                 if self.dampers[key]["mode"] == "q":
                     self.dampers[key]["ready_task"] = 0
@@ -230,14 +233,39 @@ class main_loop_class:
 
         if self.dampers[key]["ready_move"] == 1:
             self.dampers[key]["ready_task"] = 0
-            if self.dampers[key]["valume"] > int(q) + self.dampers[key]["error"]:
-                self.obj_owen.close_q(int(key), 200)
+            out = self.calculate_pid(float(self.flow_meter[key]["valume"][0]), float(self.dampers[key]["q"]),key)
+            if float(self.dampers[key]["q"]) < float(q) + float(self.dampers[key]["error"]):
+                if out > 5000:
+                    print("close",key,"=", 5000)
+                    self.obj_owen.close_q(int(key), 5000)
+                if out >50 and out<5000:
+                    print("close", key, "=", out)
+                    self.obj_owen.close_q(int(key), int(out))
                 self.dampers[key]["ready_move"] = 0
-            elif self.dampers[key]["valume"] > int(q) + self.dampers[key]["error"]:
-                self.obj_owen.open_q(int(key), 200)
+
+            elif float(self.dampers[key]["q"]) > float(q) - float(self.dampers[key]["error"]):
+                if out < -5000:
+                    print("open", key, "=", 5000)
+                    self.obj_owen.open_q(int(key), 5000)
+                if out < -50 and out > -5000:
+                    print("open", key, "=", out)
+                    self.obj_owen.open_q(int(key), int((-1)*out))
                 self.dampers[key]["ready_move"] = 0
             else:
                 self.dampers[key]["ready_task"] = 1
+
+    def calculate_pid(self, current_valume, task, key):
+        kp = 20000
+        kd = 100
+        self.err_PID_D[key] = task - current_valume
+        d = (self.err_PID_D[key] - self.prev_err_PID_D[key])
+        self.prev_err_PID_D[key] = self.err_PID_D[key]
+        out = (self.err_PID_D[key] * kp + d * kd)
+
+        return out
+
+
+
 
     def _is_ready_task(self):
         for key in self.dampers:
