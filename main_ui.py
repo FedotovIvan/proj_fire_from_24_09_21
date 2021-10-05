@@ -3,7 +3,7 @@ from PyQt5 import QtWidgets, uic
 import PyQt5
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import *
-import pyqtgraph as pg
+
 from threading import Thread
 from ui_py import Ui_MainWindow as MainForm
 from main_lopp import main_loop_class
@@ -33,7 +33,7 @@ class my_ui_class(QtWidgets.QMainWindow,):
         self.create_table_rate()
         self.create_table_data()
 
-        self.timer.start(500)
+        self.timer.start(200)
     def stop_save(self):
         self.mainloop.list_state["save"] = 0
     def func_save_from_now(self):
@@ -115,10 +115,11 @@ class my_ui_class(QtWidgets.QMainWindow,):
                         if self.my_data["dampers"][key]["dir"] == 3:
                             self.ui.table_rate.setItem(x, 2, QtWidgets.QTableWidgetItem( "(-)"+str(self.my_data["dampers"][key]["time"]) ))
 
-                    print(self.my_data["dampers"][key]["ready_task"])
+
 
                 except Exception as e:
                     print(e)
+                    print('ошибка обновления табицы потока')
                 x += 1
         x = 0
         #надо доделать item

@@ -124,8 +124,8 @@ class driver_hard:
 
 class main_loop_class:
     def __init__(self, init_param):
-        self.comport = "COM7"
-        self.init_debag = True
+        self.comport = "COM10"
+        self.init_debag = False
 
         self.mb1_device ={}
         self.mb2_device = {}
@@ -170,7 +170,14 @@ class main_loop_class:
         print(self.dampers)
         for key in self.flow_meter:
             if self.flow_meter[key]["enable"] == str(1):
-                self.flow_meter[key]["obj"] = flow_meter_class(self.comport,int(self.flow_meter[key]["id"]),register_flow=167,register_temp=171,debug=self.init_debag)
+                if int(key) < 3:
+                    self.flow_meter[key]["obj"] = flow_meter_class(self.comport,int(self.flow_meter[key]["id"]),
+                                                                   register_flow=167,register_temp=171,debug=self.init_debag)
+                else:
+                    self.flow_meter[key]["obj"] = flow_meter_class(self.comport, int(self.flow_meter[key]["id"]),
+                                                                   register_flow=0, register_temp=171,
+                                                                   debug=self.init_debag, is_no_air=True)
+
 
         print(self.flow_meter)
         for key in self.mb1_device:
@@ -230,29 +237,29 @@ class main_loop_class:
                     self.dampers[key]["ready_task"] = 0
                     self._my_pid(key,self.dampers[key]["q"])
     def _my_pid(self,key,q):
+        if self.flow_meter[key]["valume"][0] != -1:
+            if self.dampers[key]["ready_move"] == 1:
+                self.dampers[key]["ready_task"] = 0
+                out = self.calculate_pid(float(self.flow_meter[key]["valume"][0]), float(self.dampers[key]["q"]),key)
+                if float(self.dampers[key]["q"]) < float(q) + float(self.dampers[key]["error"]):
+                    if out > 5000:
+                        print("close",key,"=", 5000)
+                        self.obj_owen.close_q(int(key), 5000)
+                    if out >50 and out<5000:
+                        print("close", key, "=", out)
+                        self.obj_owen.close_q(int(key), int(out))
+                    self.dampers[key]["ready_move"] = 0
 
-        if self.dampers[key]["ready_move"] == 1:
-            self.dampers[key]["ready_task"] = 0
-            out = self.calculate_pid(float(self.flow_meter[key]["valume"][0]), float(self.dampers[key]["q"]),key)
-            if float(self.dampers[key]["q"]) < float(q) + float(self.dampers[key]["error"]):
-                if out > 5000:
-                    print("close",key,"=", 5000)
-                    self.obj_owen.close_q(int(key), 5000)
-                if out >50 and out<5000:
-                    print("close", key, "=", out)
-                    self.obj_owen.close_q(int(key), int(out))
-                self.dampers[key]["ready_move"] = 0
-
-            elif float(self.dampers[key]["q"]) > float(q) - float(self.dampers[key]["error"]):
-                if out < -5000:
-                    print("open", key, "=", 5000)
-                    self.obj_owen.open_q(int(key), 5000)
-                if out < -50 and out > -5000:
-                    print("open", key, "=", out)
-                    self.obj_owen.open_q(int(key), int((-1)*out))
-                self.dampers[key]["ready_move"] = 0
-            else:
-                self.dampers[key]["ready_task"] = 1
+                elif float(self.dampers[key]["q"]) > float(q) - float(self.dampers[key]["error"]):
+                    if out < -5000:
+                        print("open", key, "=", 5000)
+                        self.obj_owen.open_q(int(key), 5000)
+                    if out < -50 and out > -5000:
+                        print("open", key, "=", out)
+                        self.obj_owen.open_q(int(key), int((-1)*out))
+                    self.dampers[key]["ready_move"] = 0
+                else:
+                    self.dampers[key]["ready_task"] = 1
 
     def calculate_pid(self, current_valume, task, key):
         kp = 20000

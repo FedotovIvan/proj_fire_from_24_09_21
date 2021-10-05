@@ -41,7 +41,7 @@ class flow_meter_class:
         check = 0
         ok = 0
         x = -1
-        while check < 5:
+        while check < 4:
             try:
                 if self.is_no_air == True:
                     x = self.instr.read_float(addr, 4, 2)
@@ -103,7 +103,7 @@ class mx110_read_data:
         check = 0
         ok = 0
         x = -1
-        while check < 5:
+        while check < 3:
             try:
                 x = self.instr.read_float(addr, 4, 2)
                 ok = 1
