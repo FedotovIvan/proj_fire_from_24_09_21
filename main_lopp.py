@@ -1,5 +1,5 @@
 import time
-
+from datetime import datetime
 import minimalmodbus
 from driver_lub import owen, mx110_read_data, flow_meter_class
 from threading import Thread
@@ -137,7 +137,8 @@ class main_loop_class:
                            "period1": 0,
                            "period2": 0,
                            "save": 0,
-                           "start_save": 1}
+                           "start_save": 1,
+                           "out_pid": 1}
         self.err_PID_D = {"0": 0, "1": 0, "2": 0, "3": 0, "4": 0}
         self.prev_err_PID_D = {"0": 0, "1": 0, "2": 0, "3": 0, "4": 0}
 
@@ -246,33 +247,37 @@ class main_loop_class:
                 self.dampers[key]["ready_task"] = 0
                 out = self.calculate_pid(float(self.flow_meter[key]["valume"][0]), float(self.dampers[key]["q"]),key)
                 if float(self.dampers[key]["q"]) < float(q) + float(self.dampers[key]["error"]):
-                    if out > 5000:
-                        print("close",key,"=", 5000)
-                        self.obj_owen.open_q(int(key), 5000)
-                    if out >50 and out<5000:
+                    if out > 4000:
+                        print("close",key,"=", 4000)
+                        self.obj_owen.open_q(int(key), 4000)
+                    if out >90 and out<4000:
                         print("close", key, "=", out)
                         self.obj_owen.open_q(int(key), int(out))
                     self.dampers[key]["ready_move"] = 0
 
-                elif float(self.dampers[key]["q"]) > float(q) - float(self.dampers[key]["error"]):
-                    if out < -5000:
-                        print("open", key, "=", 5000)
-                        self.obj_owen.close_q(int(key), 5000)
-                    if out < -50 and out > -5000:
+                if float(self.dampers[key]["q"]) > float(q) - float(self.dampers[key]["error"]):
+
+                    if int(out) < -4000:
+                        print("open", key, "=", 4000)
+                        self.obj_owen.close_q(int(key), 4000)
+                    if int(out) < -90 and int(out) > -4000:
                         print("open", key, "=", out)
-                        self.obj_owen.close_q(int(key), int((-1)*out))
+                        self.obj_owen.close_q(int(key),(-1)*int(out))
                     self.dampers[key]["ready_move"] = 0
-                else:
+
+                if float(self.dampers[key]["q"]) < float(q) - float(self.dampers[key]["error"]) and float(self.dampers[key]["q"]) > float(q) + float(self.dampers[key]["error"]):
                     self.dampers[key]["ready_task"] = 1
+                self.dampers[key]["ready_move"] = 0
+            self.dampers[key]["ready_move"] = 0
 
     def calculate_pid(self, current_valume, task, key):
-        kp = 20000
+        kp = 10500
         kd = 100
         self.err_PID_D[key] = task - current_valume
         d = (self.err_PID_D[key] - self.prev_err_PID_D[key])
         self.prev_err_PID_D[key] = self.err_PID_D[key]
         out = (self.err_PID_D[key] * kp + d * kd)
-
+        self.list_state["out_pid"] = out
         return out
 
 
@@ -322,7 +327,7 @@ class main_loop_class:
                 print("файл закрыт")
             return
         if self.list_state["start_save"] == 1:
-            timestr = time.strftime("%Y_%m_%d-%H_%M")
+            timestr = time.strftime("%Y_%m_%d-%H_%M_%S")
             self.file = open("data_" + timestr, "w")
             str_head = ""
             for key in self.flow_meter:
@@ -339,11 +344,11 @@ class main_loop_class:
                 if self.mb2_device[key]["enable"] == str(1):
                     str_head += str(self.mb2_device[key]["name"])
                     str_head += ","
-            for key in self.dampers:
+            '''for key in self.dampers:
                 if self.dampers[key]["enable"] == str(1):
                     str_head += "заслонка_"
                     str_head += str(key)
-                    str_head += "_задача,"
+                    str_head += "_задача,"'''
             str_head +="\n"
             self.file.write(str_head)
             self.list_state["start_save"] = 0
@@ -362,7 +367,8 @@ class main_loop_class:
             if self.mb2_device[key]["enable"] == str(1):
                 str_data += str(self.mb2_device[key]["valume"])
                 str_data += ","
-        str_data += time.strftime("%Y,%m,%d,%H,%M")
+        str_data += datetime.now().strftime("%Y,%m,%d,%H,%M,%S,%f")
+        #str_data += time.strftime("%Y,%m,%d,%H,%M,%S,%f")
         str_data += "\n"
         self.file.write(str_data)
 

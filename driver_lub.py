@@ -28,7 +28,7 @@ class flow_meter_class:
             self.instr.serial.baudrate = self.baundrate  # Baud
             self.instr.serial.bytesize = self.bytesize
             self.instr.serial.stopbits = self.stopbit
-            self.instr.serial.timeout = self.timeout
+            #self.instr.serial.timeout = self.timeout
             self.instr.mode = minimalmodbus.MODE_RTU
             self.instr.clear_buffers_before_each_transaction = True
         else:
@@ -63,7 +63,7 @@ class flow_meter_class:
                 self.temp = self.read_register(self.register_temp)
             else:
                 self.flow = self.read_register(self.register_flow)
-                self.temp = 0
+                self.temp = self.read_register(8)
             x = self.flow - self.prev_flow
             self.prev_flow = self.flow
         else:
@@ -93,7 +93,7 @@ class mx110_read_data:
             self.instr.serial.baudrate = self.baundrate  # Baud
             self.instr.serial.bytesize = self.bytesize
             self.instr.serial.stopbits = self.stopbit
-            self.instr.serial.timeout = self.timeout
+            #self.instr.serial.timeout = self.timeout
             self.instr.mode = minimalmodbus.MODE_RTU
             self.instr.clear_buffers_before_each_transaction = True
         else:
@@ -161,7 +161,7 @@ class owen:
             self.instr.serial.baudrate = self.baundrate  # Baud
             self.instr.serial.bytesize = self.bytesize
             self.instr.serial.stopbits = self.stopbit
-            self.instr.serial.timeout = self.timeout
+            self.instr.serial.timeout = 0.1
             self.instr.mode = minimalmodbus.MODE_RTU
             self.instr.clear_buffers_before_each_transaction = True
         else:

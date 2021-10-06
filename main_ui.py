@@ -109,7 +109,7 @@ class my_ui_class(QtWidgets.QMainWindow,):
                 temp = self.my_data["flow_meter"][key]["valume"]
                 try:
                     self.ui.table_rate.setItem(x, 1, QtWidgets.QTableWidgetItem(str("%.04f (%.03f)"%(rate[0],rate[2]))))
-                    self.ui.table_rate.setItem(x, 3, QtWidgets.QTableWidgetItem(str("%.03f"%temp[1])))
+                    self.ui.table_rate.setItem(x, 3, QtWidgets.QTableWidgetItem(str("%.04f"%temp[1])))
                     self.ui.table_rate.setItem(x, 4, QtWidgets.QTableWidgetItem("?"))
                     if self.my_data["dampers"][key]["ready_task"] == 1:
 
@@ -135,7 +135,7 @@ class my_ui_class(QtWidgets.QMainWindow,):
     def create_table_data(self):
         item = self.ui.table_data.horizontalHeaderItem(0)
         item.setText(self._translate("MainWindow", "Имя"))
-        self.ui.table_data.horizontalHeader().resizeSection(0, 85)
+        self.ui.table_data.horizontalHeader().resizeSection(0, 120)
         # item.setSizeHint(QtCore.QSize(20, 10))
 
         item = self.ui.table_data.horizontalHeaderItem(1)
@@ -170,9 +170,9 @@ class my_ui_class(QtWidgets.QMainWindow,):
         self.my_data = self.mainloop.get_all_data_to_ui()
         self.refresh_table_data()
         self.refresh_table_rate()
-        self.ui.label_20.setText("подключен ли = %d\nпериод датч = %.01f\nпериод овен = %.02f\nсохраняет = %.01f"%(self.mainloop.list_state["work"],
+        self.ui.label_20.setText("подключен ли = %d\nпериод датч = %.01f\nпериод овен = %.02f\nсохраняет = %.01f\npid = %.01f"%(self.mainloop.list_state["work"],
                                                                                                   self.mainloop.list_state["period1"],self.mainloop.list_state["period2"],
-                                                                                            self.mainloop.list_state["save"]))
+                                                                                            self.mainloop.list_state["save"],self.mainloop.list_state["out_pid"]))
 
         if self.mainloop.list_state["work"] == 1:
             self.ui.connect_bt.setEnabled(False)
