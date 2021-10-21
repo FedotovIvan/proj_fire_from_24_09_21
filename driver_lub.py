@@ -37,11 +37,23 @@ class flow_meter_class:
         self.flow = 0
         self.temp = 0
 
+    def open_port(self):
+        self.instr = minimalmodbus.Instrument(self.port, self.slave_id_modbus, minimalmodbus.MODE_RTU)
+        self.instr.serial.baudrate = self.baundrate  # Baud
+        self.instr.serial.bytesize = self.bytesize
+        self.instr.serial.stopbits = self.stopbit
+        # self.instr.serial.timeout = 0.1
+        self.instr.mode = minimalmodbus.MODE_RTU
+        self.instr.clear_buffers_before_each_transaction = True
+
     def read_register(self, addr):
         check = 0
         ok = 0
         x = -1
-        while check < 4:
+        while check < 5:
+            if self.instr.serial.is_open == False:
+                self.open_port()
+                print("i open new port")
             try:
                 if self.is_no_air == True:
                     x = self.instr.read_float(addr, 4, 2)
@@ -99,11 +111,23 @@ class mx110_read_data:
         else:
             print("debug init mb")
 
+    def open_port(self):
+        self.instr = minimalmodbus.Instrument(self.port, self.slave_id_modbus, minimalmodbus.MODE_RTU)
+        self.instr.serial.baudrate = self.baundrate  # Baud
+        self.instr.serial.bytesize = self.bytesize
+        self.instr.serial.stopbits = self.stopbit
+        # self.instr.serial.timeout = 0.1
+        self.instr.mode = minimalmodbus.MODE_RTU
+        self.instr.clear_buffers_before_each_transaction = True
+
     def read_register(self, addr):
         check = 0
         ok = 0
         x = -1
-        while check < 3:
+        while check < 5:
+            if self.instr.serial.is_open == False:
+                self.open_port()
+                print("i open new port")
             try:
                 x = self.instr.read_float(addr, 4, 2)
                 ok = 1
@@ -161,15 +185,25 @@ class owen:
             self.instr.serial.baudrate = self.baundrate  # Baud
             self.instr.serial.bytesize = self.bytesize
             self.instr.serial.stopbits = self.stopbit
-            self.instr.serial.timeout = 0.1
+            #self.instr.serial.timeout = 0.1
             self.instr.mode = minimalmodbus.MODE_RTU
             self.instr.clear_buffers_before_each_transaction = True
         else:
             print("debug start")
-
+    def open_port(self):
+        self.instr = minimalmodbus.Instrument(self.port, self.slave_id_modbus, minimalmodbus.MODE_RTU)
+        self.instr.serial.baudrate = self.baundrate  # Baud
+        self.instr.serial.bytesize = self.bytesize
+        self.instr.serial.stopbits = self.stopbit
+        # self.instr.serial.timeout = 0.1
+        self.instr.mode = minimalmodbus.MODE_RTU
+        self.instr.clear_buffers_before_each_transaction = True
     def read_register(self, addr_reg):
         check = 0
         while check == 0:
+            if self.instr.serial.is_open == False:
+                self.open_port()
+                print("i open new port")
             check = 1
             try:
                 data = self.instr.read_register(addr_reg)

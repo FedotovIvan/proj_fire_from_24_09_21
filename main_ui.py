@@ -58,8 +58,9 @@ class my_ui_class(QtWidgets.QMainWindow,):
         self.create_table_data()
         self.tr = Thread(target=self.mainloop.main_loop)
         self.tr.start()
-        self.tr1 = Thread(target=self.mainloop.main_loop_owen)
-        self.tr1.start()
+        self.func_save_from_now()
+        #self.tr1 = Thread(target=self.mainloop.main_loop_owen)
+        #self.tr1.start()
 
     def create_table_rate(self):
         num_flow_meters = 0
@@ -158,6 +159,7 @@ class my_ui_class(QtWidgets.QMainWindow,):
 
             self.ui.table_data.setItem(i , 0, QtWidgets.QTableWidgetItem(str(self.my_data["mb1_device"][key]["name"])))
             self.ui.table_data.setItem(i, 1, QtWidgets.QTableWidgetItem(str("%.03f" % self.my_data["mb1_device"][key]["valume"])))
+
             i += 1
         i = 0
         for key in self.my_data["mb2_device"]:
@@ -165,6 +167,8 @@ class my_ui_class(QtWidgets.QMainWindow,):
             self.ui.table_data.setItem(i, 2, QtWidgets.QTableWidgetItem(str(self.my_data["mb2_device"][key]["name"])))
             self.ui.table_data.setItem(i, 3, QtWidgets.QTableWidgetItem(str("%.03f" % self.my_data["mb2_device"][key]["valume"])))
             i += 1
+
+        self.ui.table_data.setItem(7, 1,QtWidgets.QTableWidgetItem(str("%.05f" % (float(self.my_data["mb1_device"]["1"]["valume"])-float(self.my_data["mb1_device"]["2"]["valume"])+1))))
     def timer_func(self):
 
         self.my_data = self.mainloop.get_all_data_to_ui()

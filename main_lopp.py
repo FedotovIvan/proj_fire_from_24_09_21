@@ -124,7 +124,7 @@ class driver_hard:
 
 class main_loop_class:
     def __init__(self, init_param):
-        self.comport = "COM7"
+        self.comport = "COM10"
         self.init_debag = False
 
         self.mb1_device ={}
@@ -194,7 +194,7 @@ class main_loop_class:
         print(self.mb1_device)
         for key in self.dampers:
             if self.dampers[key]["enable"] == str(1):
-                self.obj_owen = owen("COM10",int(self.dampers[key]["id"]),debug=self.init_debag)
+                self.obj_owen = owen(self.comport,int(self.dampers[key]["id"]),debug=self.init_debag)
                 break
 
     def _read_all_data(self):
@@ -299,14 +299,25 @@ class main_loop_class:
             if self.mb2_device[key]["enable"] == str(1):
                 self.mb2_device[key]["valume"] = self.mb2_device[key]["obj"].read_one_channel(int(key))
         return [self.flow_meter, self.mb1_device]
+
     def get_all_data_to_ui(self):
         return {"dampers":self.dampers, "flow_meter":self.flow_meter,"mb1_device":self.mb1_device,"mb2_device":self.mb2_device}
+
     def main_loop(self):
         while self.list_state["work"] == 1:
-            start_time = time.time()
-            self._read_all_data()
-            self.save_data()
-            self.list_state["period1"] = time.time() - start_time
+            try:
+                start_time = time.time()
+                self._read_all_data()
+                self.save_data()
+                ready_or = self.obj_owen.read_ready()
+                self._is_ready_task()
+                for key in self.dampers:
+                    self.dampers[key]["ready_move"] = ready_or[int(key)]
+                self._rule_device()
+                self.list_state["period1"] = time.time() - start_time
+            except:
+                print("что-то не так в главном цикле")
+
     def main_loop_owen(self):
         while self.list_state["work"] == 1:
             start_time = time.time()
@@ -328,7 +339,7 @@ class main_loop_class:
             return
         if self.list_state["start_save"] == 1:
             timestr = time.strftime("%Y_%m_%d-%H_%M_%S")
-            self.file = open("data_" + timestr, "w")
+            self.file = open("data_" + timestr + '.txt', "w")
             str_head = ""
             for key in self.flow_meter:
                 if self.flow_meter[key]["enable"] == str(1):
@@ -367,7 +378,7 @@ class main_loop_class:
             if self.mb2_device[key]["enable"] == str(1):
                 str_data += str(self.mb2_device[key]["valume"])
                 str_data += ","
-        str_data += datetime.now().strftime("%Y,%m,%d,%H,%M,%S,%f")
+        str_data += datetime.now().strftime("%Y.%m.%d.%H.%M.%S.%f")
         #str_data += time.strftime("%Y,%m,%d,%H,%M,%S,%f")
         str_data += "\n"
         self.file.write(str_data)
